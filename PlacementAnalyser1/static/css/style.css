@@ -1,0 +1,54 @@
+body {
+    background: #f8f9fa;
+}
+
+section {
+    min-height: 80vh;
+}
+
+h1, h2 {
+    color: #0d6efd;
+}
+.hero-section {
+    background: linear-gradient(
+        rgba(0,0,0,0.6),
+        rgba(0,0,0,0.6)
+    ),
+    url("../images/hero.jpg");
+    background-size: cover;
+    background-position: center;
+    min-height: 100vh;
+}
+
+.hero-section h1,
+.hero-section p {
+    animation: fadeIn 1.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+#resume {
+    background: #f8f9fa;
+}
+
+#resSkills .badge {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+}
+.card {
+    border-radius: 12px;
+}
+
+#dashboard h2 {
+    font-weight: bold;
+}
+
+#dashStatus {
+    color: #198754;
+}
+
+button {
+    border-radius: 25px;
+}
