@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - Resume Builder</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom CSS -->
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+  <style>
+    .auth-container {
+      max-width: 500px;
+      margin: 5rem auto;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      background: white;
+    }
+    .auth-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .auth-header h1 {
+      color: #2d3748;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    .auth-header p {
+      color: #718096;
+    }
+    .form-control {
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 1rem;
+    }
+    .form-control:focus {
+      border-color: #3182ce;
+      box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
+    }
+    .btn-auth {
+      width: 100%;
+      padding: 0.75rem;
+      font-weight: 600;
+      border-radius: 6px;
+      margin: 1rem 0;
+    }
+    .divider {
+      text-align: center;
+      margin: 1.5rem 0;
+      position: relative;
+    }
+    .divider::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background-color: #e2e8f0;
+      z-index: 1;
+    }
+    .divider span {
+      background: white;
+      padding: 0 1rem;
+      position: relative;
+      z-index: 2;
+      color: #718096;
+    }
+    .social-login {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+    .btn-social {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      background: white;
+      border-radius: 6px;
+      font-weight: 500;
+      color: #2d3748;
+      transition: all 0.2s;
+    }
+    .btn-social:hover {
+      background: #f8fafc;
+      border-color: #cbd5e0;
+    }
+    .auth-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #718096;
+    }
+    .auth-footer a {
+      color: #3182ce;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .auth-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body style="background-color: #1a365d; min-height: 100vh; display: flex; align-items: center;">
+  <div class="container">
+    <div class="auth-container">
+      <div class="auth-header">
+        <h1>Welcome Back</h1>
+        <p>Sign in to access your resume builder</p>
+      </div>
+      
+      <form id="signinForm" method="POST" action="{{ url_for('signin') }}">
+        <div class="mb-3">
+          <input type="email" class="form-control" name="email" placeholder="Email address" required>
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" name="password" placeholder="Password" required>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="rememberMe">
+            <label class="form-check-label" for="rememberMe">Remember me</label>
+          </div>
+          <a href="#" class="text-decoration-none">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn btn-primary btn-auth">Sign In</button>
+      </form>
+
+      <div class="divider">
+        <span>OR SIGN IN WITH</span>
+      </div>
+
+      <div class="social-login">
+        <button type="button" class="btn btn-social">
+          <i class="fab fa-google"></i>
+          Continue with Google
+        </button>
+        <button type="button" class="btn btn-social">
+          <i class="fab fa-linkedin"></i>
+          Continue with LinkedIn
+        </button>
+      </div>
+
+      <div class="auth-footer">
+        Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+  document.getElementById('signinForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    try {
+      // Show loading state
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Signing in...';
+
+      const formData = new FormData(form);
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: new URLSearchParams(formData),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.redirect) {
+        window.location.href = result.redirect;
+      } else if (result.error) {
+        alert(result.error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      // Reset button state
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign In';
+    }
+  });
+</script>
+</body>
+</html>

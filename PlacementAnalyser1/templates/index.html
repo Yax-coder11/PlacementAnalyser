@@ -1,103 +1,296 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Placement Analyzer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Builder - Create Professional Resumes Online</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom CSS -->
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
   <style>
-    section { display:none; }
+    section { display: none; }
   </style>
 </head>
 <body>
-
-<!-- NAVBAR -->
-<nav class="navbar navbar-dark navbar-expand-md bg-dark px-4">
-  <span class="navbar-brand">Placement Analyzer</span>
-  <div class="ms-auto">
-    <ul class="navbar-nav align-items-center flex-row ms-auto">
-      <li class="nav-item">
-        <button class="btn btn-link text-white" onclick="showHome()">Home</button>
-      </li>
-      <li class="nav-item">
-        <button class="btn btn-link text-white" onclick="showAbout()">About</button>
-      </li>
-      <li class="nav-item">
-        <button class="btn btn-link text-white" data-bs-toggle="modal" data-bs-target="#signupModal">Signup</button>
-      </li>
-      <li class="nav-item">
-        <button class="btn btn-link text-white" data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
-      </li>
-      <li class="nav-item ms-2">
-        <button class="btn btn-outline-danger btn-sm"
-          onclick="openAdminLogin()">
-          Admin
-        </button>
-      </li>
-    </ul>
-  </div>
-</nav>
-
-
-<!-- ADMIN LOGIN MODEL -->
-<div class="modal fade" id="adminModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content p-3">
-      <h5 class="mb-3">Admin Login</h5>
-
-      <input id="adminEmail" class="form-control mb-2" placeholder="Admin Email">
-      <input id="adminPassword" type="password" class="form-control mb-3" placeholder="Password">
-
-      <button class="btn btn-danger w-100" onclick="adminLogin()">Login</button>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="#">
+        <i class="fas fa-file-alt me-2"></i>ResumeNow
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto align-items-center">
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showHome()">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showAbout()">Templates</a>
+          </li>
+          <li class="nav-item">
+            <button class="btn btn-primary" onclick="startResume()">Create Resume</button>
+          </li>
+          <li class="nav-item ms-2">
+            <button class="btn btn-outline-light" onclick="openAdminLogin()">
+              <i class="fas fa-lock"></i> Admin
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
-  </div>
-</div>
+  </nav>
 
 
-
-<!-- HOME -->
-<section id="home" class="container mt-5" style="display:block;">
-  <div class="row">
-    <div class="col-md-6 bg-light p-5 text-center">
-      IMAGE
-    </div>
-    <div class="col-md-6">
-      <h3>Placement Analyzer</h3>
-      <p>A system to generate resumes and prepare for placements.</p>
-      <button class="btn btn-success" onclick="startResume()">Generate Resume</button>
-    </div>
-  </div>
-</section>
-
-<!-- ABOUT -->
-<section id="about" class="container mt-5">
-  <h4>About Project</h4>
-
-  <!-- Accordion -->
-  <div class="accordion" id="faq">
-    <div class="accordion-item">
-      <h2 class="accordion-header">
-        <button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#q1">
-          What is Placement Analyzer?
-        </button>
-      </h2>
-      <div id="q1" class="accordion-collapse collapse show">
-        <div class="accordion-body">
-          It helps students generate structured resumes.
+  <!-- Admin Login Modal -->
+  <div class="modal fade" id="adminModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Admin Login</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="adminLoginForm">
+            <div class="mb-3">
+              <label for="adminEmail" class="form-label">Email Address</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                <input type="email" class="form-control" id="adminEmail" placeholder="admin@example.com" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="adminPassword" class="form-label">Password</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                <input type="password" class="form-control" id="adminPassword" placeholder="••••••••" required>
+              </div>
+            </div>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer justify-content-center">
+          <p class="text-muted small mb-0">For authorized personnel only</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Carousel -->
-  <div id="carouselExample" class="carousel slide mt-4">
-    <div class="carousel-inner">
-      <div class="carousel-item active">
-        <div class="p-5 bg-secondary text-white text-center">Resume Builder</div>
-      </div>
-      <div class="carousel-item">
-        <div class="p-5 bg-dark text-white text-center">Placement Preparation</div>
+
+
+  <!-- Hero Section -->
+  <section id="home" class="hero-section" style="display:block;">
+    <div class="container">
+      <div class="hero-content fade-in">
+        <h1 class="hero-title">Create a Professional Resume in Minutes</h1>
+        <p class="hero-subtitle">Build a resume that gets you hired with our easy-to-use resume builder</p>
+        <div class="d-flex justify-content-center gap-3">
+          <button class="btn btn-primary btn-lg" onclick="startResume()">
+            <i class="fas fa-plus-circle me-2"></i>Create My Resume
+          </button>
+          <a href="#templates" class="btn btn-outline-light btn-lg">
+            <i class="far fa-file-alt me-2"></i>View Templates
+          </a>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="py-5 bg-light">
+    <div class="container">
+      <div class="text-center mb-5">
+        <h2>Why Choose Our Resume Builder?</h2>
+        <p class="lead text-muted">Create a resume that stands out from the crowd</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body text-center p-4">
+              <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                <i class="fas fa-magic fa-2x text-primary"></i>
+              </div>
+              <h4>Easy to Use</h4>
+              <p class="text-muted">Our intuitive interface makes building your resume quick and simple.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body text-center p-4">
+              <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                <i class="fas fa-file-alt fa-2x text-primary"></i>
+              </div>
+              <h4>Professional Templates</h4>
+              <p class="text-muted">Choose from a variety of ATS-friendly resume templates.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body text-center p-4">
+              <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                <i class="fas fa-cloud-download-alt fa-2x text-primary"></i>
+              </div>
+              <h4>Download & Print</h4>
+              <p class="text-muted">Download in multiple formats including PDF, Word, and more.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Templates Section -->
+  <section id="templates" class="py-5">
+    <div class="container">
+      <div class="text-center mb-5">
+        <h2>Professional Resume Templates</h2>
+        <p class="lead text-muted">Choose a template to get started</p>
+      </div>
+      
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card template-card">
+            <div class="position-relative">
+              <img src="https://via.placeholder.com/400x565/f8f9fa/2d3748?text=Modern+Resume" class="card-img-top" alt="Modern Resume Template">
+              <div class="template-overlay">
+                <button class="btn btn-primary" onclick="selectTemplate('modern')">Use This Template</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Modern</h5>
+              <p class="card-text text-muted">Clean and professional design</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card template-card">
+            <div class="position-relative">
+              <img src="https://via.placeholder.com/400x565/f8f9fa/2d3748?text=Professional+Resume" class="card-img-top" alt="Professional Resume Template">
+              <div class="template-overlay">
+                <button class="btn btn-primary" onclick="selectTemplate('professional')">Use This Template</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Professional</h5>
+              <p class="card-text text-muted">Classic and elegant</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card template-card">
+            <div class="position-relative">
+              <img src="https://via.placeholder.com/400x565/f8f9fa/2d3748?text=Creative+Resume" class="card-img-top" alt="Creative Resume Template">
+              <div class="template-overlay">
+                <button class="btn btn-primary" onclick="selectTemplate('creative')">Use This Template</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Creative</h5>
+              <p class="card-text text-muted">Stand out from the crowd</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="py-5 bg-light">
+    <div class="container">
+      <div class="text-center mb-5">
+        <h2>What Our Users Say</h2>
+        <p class="lead text-muted">Join thousands of professionals who found their dream jobs</p>
+      </div>
+      
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                  <i class="fas fa-user text-primary"></i>
+                </div>
+                <div>
+                  <h5 class="mb-0">Sarah Johnson</h5>
+                  <p class="text-muted mb-0">Marketing Professional</p>
+                </div>
+              </div>
+              <p class="card-text">"The resume builder made it so easy to create a professional resume. I got multiple interview calls within a week!"</p>
+              <div class="text-warning">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                  <i class="fas fa-user text-primary"></i>
+                </div>
+                <div>
+                  <h5 class="mb-0">Michael Chen</h5>
+                  <p class="text-muted mb-0">Software Engineer</p>
+                </div>
+              </div>
+              <p class="card-text">"The ATS optimization feature is a game-changer. My resume now gets past the screening software every time."</p>
+              <div class="text-warning">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star-half-alt"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                  <i class="fas fa-user text-primary"></i>
+                </div>
+                <div>
+                  <h5 class="mb-0">Emily Rodriguez</h5>
+                  <p class="text-muted mb-0">Graphic Designer</p>
+                </div>
+              </div>
+              <p class="card-text">"I love the creative templates! They helped me showcase my design skills while keeping my resume professional."</p>
+              <div class="text-warning">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="far fa-star"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </section>
 
 <!-- SIGNUP MODAL -->
@@ -170,64 +363,15 @@
 
 <script>
 
-console.log("JS running");
+  console.log("JS running");
 
-let loggedIn = false;
-let currentUserEmail = null;
+  let loggedIn = false;
+  let currentUserEmail = null;
 
-
-function hideAll() {
-  document.getElementById("home").style.display = "none";
-  document.getElementById("about").style.display = "none";
-  document.getElementById("resume").style.display = "none";
-}
-
-
-function loginUser() {
-
-  const email = document.getElementById("loginEmail").value;
-  const password = document.getElementById("loginPassword").value;
-
-  fetch("/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      loggedIn = true;
-      currentUserEmail = email;   // ✅ remember user
-      alert("Login successful");
-
-      bootstrap.Modal.getInstance(
-        document.getElementById("loginModal")
-      ).hide();
-
-      hideAll();
-      document.getElementById("resume").style.display = "block";
-    } else {
-      alert("Invalid email or password");
-    }
-  });
-}
-
-
-function showHome(){
-  hideAll();
-  document.getElementById("home").style.display="block";
-}
-
-function showAbout(){
-  hideAll();
-  document.getElementById("about").style.display="block";
-}
-
-function startResume(){
-  if(!loggedIn){
-    new bootstrap.Modal(document.getElementById("signupModal")).show();
-  } else {
-    hideAll();
+  function hideAll() {
+    document.querySelectorAll('section').forEach(section => {
+      section.style.display = 'none';
+    });
     document.getElementById("resume").style.display="block";
   }
 }

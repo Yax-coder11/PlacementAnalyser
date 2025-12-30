@@ -1,198 +1,264 @@
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 import sqlite3
-from flask import Flask, render_template, request, jsonify
 import os
-from flask import Flask, request, jsonify
-import os, sqlite3
-from flask import send_from_directory
-import os
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
-
-
-def get_db():
-    return sqlite3.connect("database.db")
-
-
-
-@app.route("/signup", methods=["POST"])
-def signup():
-    try:
-        data = request.json
-        email = data["email"].strip()
-        password = data["password"].strip()
-
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor()
-
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            email TEXT PRIMARY KEY,
-            password TEXT
-        )
-        """)
-
-        cur.execute(
-            "INSERT INTO users (email, password) VALUES (?, ?)",
-            (email, password)
-        )
-
-        conn.commit()
-        conn.close()
-
-        print("SIGNUP SUCCESS:", email)
-        return jsonify({"success": True})
-
-    except Exception as e:
-        print("SIGNUP ERROR:", e)
-        return jsonify({"success": False, "msg": "User already exists"}), 400
-
-@app.route("/login", methods=["POST"])
-def login():
-    try:
-        data = request.json
-        email = data["email"].strip()
-        password = data["password"].strip()
-
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor()
-
-        cur.execute(
-            "SELECT * FROM users WHERE email=? AND password=?",
-            (email, password)
-        )
-
-        user = cur.fetchone()
-        conn.close()
-
-        print("LOGIN ATTEMPT:", email, "FOUND:", bool(user))
-
-        return jsonify({"success": True if user else False})
-
-    except Exception as e:
-        print("LOGIN ERROR:", e)
-        return jsonify({"success": False}), 500
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-
-@app.route("/save_resume", methods=["POST"])
-def save_resume():
-    data = request.json
-
-    name = data["name"]
-    phone = data["phone"]
-    email = data["email"]
-    degree = data["degree"]
-    cgpa = data["cgpa"]
-    skills = data["skills"]
-    projects = data["projects"]
-
-    # -------- Resume Text --------
-    resume_text = f"""
-{name.upper()}
---------------------------------------------------
-{degree} | CGPA: {cgpa}
-
-CONTACT
-Phone : {phone}
-Email : {email}
-
-SKILLS
---------------------------------------------------
-"""
-
-    for s in skills.split(","):
-        resume_text += f"- {s.strip()}\n"
-
-    resume_text += f"""
-
-PROJECTS
---------------------------------------------------
-{projects}
-"""
-
-    # -------- Save as TXT --------
-    os.makedirs("resumes", exist_ok=True)
-    file_path = f"resumes/{name.replace(' ', '_')}.txt"
-
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(resume_text)
-
-    # -------- SAVE TO DATABASE --------
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS resumes (
+    # Create users table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_email TEXT,
-        name TEXT,
-        phone TEXT,
-        email TEXT,
-        degree TEXT,
-        cgpa TEXT,
-        skills TEXT,
-        projects TEXT,
-        file_path TEXT
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
-    """)
-
-    cur.execute("""INSERT INTO resumes ( name, phone, email, degree, cgpa, skills, projects, file_path) VALUES (?,?,?,?,?,?,?,?)""", (
-        name, phone, email, degree,
-        cgpa, skills, projects, file_path
-    ))
-
+    ''')
+    
+    # Create test user if not exists
+    test_email = "test@example.com"
+    cursor.execute("SELECT id FROM users WHERE email = ?", (test_email,))
+    if not cursor.fetchone():
+        hashed_password = generate_password_hash("Test@123")
+        cursor.execute(
+            "INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)",
+            ("Test", "User", test_email, hashed_password)
+        )
+        print("Created test user: test@example.com / Test@123")
+    
     conn.commit()
     conn.close()
 
-    print("RESUME SAVED TO DATABASE")
+# Initialize the database
+init_db()
 
-    return jsonify({
-        "success": True,
-        "resume_text": resume_text
-    })
+# Routes
+@app.route('/')
+def home():
+    if 'user_id' not in session:
+        return redirect(url_for('signin'))
+    return render_template('index.html')
 
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'GET':
+        return render_template('signup.html')
+    
+    # Handle POST request
+    try:
+        # Get form data
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
 
-ADMIN_EMAIL = "admin@placement.com"
-ADMIN_PASSWORD = "admin123"
+        # Validate required fields
+        if not all([first_name, last_name, email, password]):
+            return jsonify({
+                "error": "All fields are required"
+            }), 400
 
-@app.route("/admin_login", methods=["POST"])
-def admin_login():
-    data = request.json
-    if data["email"] == ADMIN_EMAIL and data["password"] == ADMIN_PASSWORD:
-        return jsonify({"success": True})
-    return jsonify({"success": False})
+        # Validate email format
+        if '@' not in email:
+            return jsonify({
+                "error": "Please enter a valid email address"
+            }), 400
 
-@app.route("/admin_dashboard")
-def admin_dashboard():
-    conn = sqlite3.connect("database.db")
-    cur = conn.cursor()
+        # Validate password strength
+        if len(password) < 8:
+            return jsonify({
+                "error": "Password must be at least 8 characters long"
+            }), 400
 
-    cur.execute("SELECT email FROM users")
-    users = cur.fetchall()
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    cur.execute("SELECT name, email, degree, cgpa, file_path FROM resumes")
-    resumes = cur.fetchall()
+        try:
+            # Check if email already exists
+            cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+            if cursor.fetchone():
+                return jsonify({
+                    "error": "Email already exists"
+                }), 400
 
-    conn.close()
+            # Hash the password
+            hashed_password = generate_password_hash(password)
 
-    return render_template("admin.html", users=users, resumes=resumes)
+            # Insert new user
+            cursor.execute(
+                "INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)",
+                (first_name, last_name, email, hashed_password)
+            )
+            user_id = cursor.lastrowid
+            
+            # Commit changes
+            conn.commit()
 
+            # Set session
+            session['user_id'] = user_id
+            session['email'] = email
 
+            return jsonify({
+                "success": True,
+                "redirect": url_for('home')
+            })
 
+        except sqlite3.IntegrityError:
+            return jsonify({
+                "error": "Email already exists"
+            }), 400
+        finally:
+            conn.close()
 
-@app.route("/download/<filename>")
-def download_resume(filename):
-    resume_dir = os.path.join(os.getcwd(), "resumes")
-    return send_from_directory(
-        resume_dir,
-        filename,
-        as_attachment=True
-    )
+    except Exception as e:
+        print(f"Error in signup: {str(e)}")
+        return jsonify({
+            "error": "An error occurred during registration. Please try again."
+        }), 500
 
+@app.route('/signin', methods=['GET', 'POST'])
+def signin():
+    if request.method == 'GET':
+        if 'user_id' in session:
+            return redirect(url_for('home'))
+        return render_template('signin.html')
+    
+    # Handle POST request for login
+    try:
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
 
-if __name__ == "__main__":
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get user by email
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user['password'], password):
+            # Set session
+            session['user_id'] = user['id']
+            session['email'] = user['email']
+            
+            return jsonify({
+                "success": True,
+                "redirect": url_for('home')
+            })
+        else:
+            return jsonify({
+                "error": "Invalid email or password"
+            }), 401
+
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        return jsonify({
+            "error": "An error occurred during login"
+        }), 500
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('signin'))
+
+# Existing routes
+@app.route("/save_resume", methods=["POST"])
+def save_resume():
+    if 'user_id' not in session:
+        return jsonify({"success": False, "message": "Not authenticated"}), 401
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "message": "No data provided"}), 400
+
+        required_fields = ['name', 'phone', 'email', 'degree', 'cgpa', 'skills', 'projects']
+        if not all(field in data for field in required_fields):
+            return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+        # Create resume text
+        resume_text = f"""
+{data['name'].upper()}
+--------------------------------------------------
+{data['degree']} | CGPA: {data['cgpa']}
+
+CONTACT
+Phone : {data['phone']}
+Email : {data['email']}
+
+SKILLS
+--------------------------------------------------
+{data['skills']}
+
+PROJECTS
+--------------------------------------------------
+{data['projects']}
+"""
+
+        # Save to database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Create resumes table if it doesn't exist
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS resumes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            email TEXT NOT NULL,
+            degree TEXT NOT NULL,
+            cgpa TEXT NOT NULL,
+            skills TEXT NOT NULL,
+            projects TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+        ''')
+
+        # Insert resume data
+        cursor.execute('''
+        INSERT INTO resumes (user_id, name, phone, email, degree, cgpa, skills, projects)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            session['user_id'],
+            data['name'],
+            data['phone'],
+            data['email'],
+            data['degree'],
+            data['cgpa'],
+            data['skills'],
+            data['projects']
+        ))
+        
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "message": "Resume saved successfully",
+            "resume_text": resume_text
+        })
+
+    except Exception as e:
+        print(f"Error saving resume: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"An error occurred while saving the resume: {str(e)}"
+        }), 500
+
+if __name__ == '__main__':
     app.run(debug=True)
