@@ -1,11 +1,10 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import os
-from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key
+app.secret_key = os.urandom(24)  # For session management # Change this to a secure secret key
 
 def get_db_connection():
     conn = sqlite3.connect('database.db')
@@ -48,8 +47,6 @@ init_db()
 # Routes
 @app.route('/')
 def home():
-    if 'user_id' not in session:
-        return redirect(url_for('signin'))
     return render_template('index.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -131,48 +128,37 @@ def signup():
 
 @app.route('/signin', methods=['GET', 'POST'])
 def signin():
-    if request.method == 'GET':
-        if 'user_id' in session:
-            return redirect(url_for('home'))
-        return render_template('signin.html')
-    
-    # Handle POST request for login
-    try:
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '').strip()
-
+    if request.method == 'POST':
+        # Handle sign-in form submission
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
         conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Get user by email
-        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-        user = cursor.fetchone()
+        user = conn.execute(
+            'SELECT * FROM users WHERE email = ?', (email,)
+        ).fetchone()
         conn.close()
 
         if user and check_password_hash(user['password'], password):
-            # Set session
             session['user_id'] = user['id']
             session['email'] = user['email']
-            
             return jsonify({
-                "success": True,
-                "redirect": url_for('home')
+                'success': True,
+                'redirect': url_for('home')
             })
         else:
             return jsonify({
-                "error": "Invalid email or password"
+                'success': False,
+                'error': 'Invalid email or password'
             }), 401
+    else:
+        # For GET request, just render the template
+        return render_template('index.html')
 
-    except Exception as e:
-        print(f"Login error: {str(e)}")
-        return jsonify({
-            "error": "An error occurred during login"
-        }), 500
-
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
-    return redirect(url_for('signin'))
+    return jsonify({'success': True})
 
 # Existing routes
 @app.route("/save_resume", methods=["POST"])
