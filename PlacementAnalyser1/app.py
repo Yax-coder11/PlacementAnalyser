@@ -2,7 +2,7 @@
 import os
 import sqlite3
 import io
-from flask import Flask, render_template, request, jsonify, session, send_file
+from flask import Flask, render_template, request, jsonify, session, send_file, redirect, url_for
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
@@ -23,11 +23,19 @@ def home():
     return render_template("index.html")
 
 
+# ---------------- ABOUT ----------------
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+
 # ---------------- SIGNUP ----------------
 @app.route("/signup", methods=["POST"])
 def signup():
     try:
         data = request.get_json()
+        firstName = data["firstName"].strip()
+        lastName = data["lastName"].strip()
         email = data["email"].strip()
         password = data["password"].strip()
 
@@ -37,13 +45,15 @@ def signup():
         cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
+            firstName TEXT,
+            lastName TEXT,
             password TEXT
         )
         """)
 
         cur.execute(
-            "INSERT INTO users (email, password) VALUES (?, ?)",
-            (email, password)
+            "INSERT INTO users (email, firstName, lastName, password) VALUES (?, ?, ?, ?)",
+            (email, firstName, lastName, password)
         )
 
         conn.commit()
@@ -217,6 +227,33 @@ def download_resume(filename):
         download_name=pdf_name,
         mimetype="application/pdf"
     )
+
+
+# ---------------- USER DASHBOARD ----------------
+@app.route("/dashboard")
+def dashboard():
+    if "user_email" not in session:
+        return redirect(url_for('home'))
+    
+    user_email = session["user_email"]
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Get user info
+    cur.execute("SELECT firstName, lastName, email FROM users WHERE email=?", (user_email,))
+    user = cur.fetchone()
+    
+    # Get user's resumes
+    cur.execute("""
+    SELECT name, degree, cgpa, skills, projects, file_path
+    FROM resumes WHERE user_email=?
+    """, (user_email,))
+    resumes = cur.fetchall()
+    
+    conn.close()
+    
+    return render_template("dashboard.html", user=user, resumes=resumes)
 
 
 # ---------------- ADMIN LOGIN ----------------
